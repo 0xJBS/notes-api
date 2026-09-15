@@ -1,106 +1,102 @@
 # Notes API - Secure JWT-Authenticated Backend
 
-A production-ready Flask REST API for a note-taking application with JWT authentication. Users can securely register, login, and manage their own notes with full CRUD operations and pagination support.
+A Flask REST API for a note-taking application with JWT authentication. Users can securely register, log in, and manage their own notes with full CRUD operations and pagination support. Each note belongs to a single user, and access controls ensure users can only read or modify their own data.
+
+**Author**: [0xJBS](https://github.com/0xJBS)
+**Repository**: https://github.com/0xJBS/notes-api
 
 ## Features
 
-✅ **JWT Authentication** - Secure token-based authentication with expiration  
-✅ **User Registration & Login** - Secure password hashing with bcrypt  
-✅ **CRUD Operations** - Create, read, update, and delete notes  
-✅ **Pagination** - Efficient data retrieval with customizable page sizes  
-✅ **Authorization** - Users can only access and modify their own notes  
-✅ **Data Validation** - Input validation on all endpoints  
-✅ **Error Handling** - Consistent, descriptive error responses  
-✅ **Database Migrations** - Flask-Migrate for schema management  
-✅ **CORS Support** - Ready for frontend integration  
+- **JWT Authentication** - Secure token-based authentication with expiration
+- **User Registration & Login** - Secure password hashing with bcrypt
+- **CRUD Operations** - Create, read, update, and delete notes
+- **Pagination** - Efficient data retrieval with customizable page sizes
+- **Authorization** - Users can only access and modify their own notes
+- **Data Validation** - Input validation on all endpoints
+- **Error Handling** - Consistent, descriptive error responses
+- **Database Migrations** - Flask-Migrate for schema management
+- **CORS Support** - Ready for frontend integration
 
 ## Tech Stack
 
-- **Framework**: Flask 2.2.2
+- **Framework**: Flask 3.0.3
 - **Database**: SQLite (SQLAlchemy ORM)
-- **Authentication**: JWT (Flask-JWT-Extended)
+- **Authentication**: JWT (Flask-JWT-Extended 4.6.0)
 - **Password Hashing**: bcrypt (Flask-Bcrypt)
-- **Validation**: Marshmallow
 - **Migrations**: Flask-Migrate
 - **Testing**: Pytest
 
 ## Project Structure
 
 ```
-notes_api/
+notes-api/
 ├── app.py              # Main Flask application with all routes
 ├── models.py           # SQLAlchemy database models (User, Note)
 ├── config.py           # Configuration for different environments
 ├── seed.py             # Database seeding script with sample data
-├── Pipfile             # Project dependencies
-├── Pipfile.lock        # Locked dependency versions
+├── test_api.py         # Pytest test suite
+├── requirements.txt    # pip dependencies
+├── Pipfile             # pipenv dependencies
 ├── README.md           # This file
-├── migrations/         # Database migration files (created by Flask-Migrate)
-└── app.db              # SQLite database (created at runtime)
+├── .env.example        # Environment variable template
+├── .gitignore          # Git ignore rules
+└── migrations/         # Database migration files (Flask-Migrate)
 ```
 
 ## Installation
 
 ### Prerequisites
 
-- Python 3.8.13 or higher
+- Python 3.10 or higher (tested on Python 3.12 and 3.14)
 - pip or pipenv
 - Git
 
 ### Setup Instructions
 
-1. **Clone the repository** (if you haven't already)
+1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd notes_api
+   git clone https://github.com/0xJBS/notes-api.git
+   cd notes-api
    ```
 
-2. **Install dependencies with Pipenv**
+2. **Install dependencies**
+
+   Using pip:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   Or using pipenv:
    ```bash
    pipenv install
-   ```
-   
-   This installs all packages specified in `Pipfile`, including:
-   - Flask and extensions
-   - SQLAlchemy for database
-   - JWT for authentication
-   - bcrypt for password hashing
-   - And more...
-
-3. **Activate the virtual environment**
-   ```bash
    pipenv shell
    ```
-   
-   Or prepend commands with `pipenv run` if not entering the shell.
 
-4. **Initialize the database with migrations**
+3. **Apply database migrations**
    ```bash
    flask db upgrade
    ```
-   
-   If this is the first time, you may need to initialize migrations:
+
+   If you are starting from a clean checkout without a `migrations/` folder, initialize it first:
    ```bash
    flask db init
    flask db migrate -m "Initial migration"
    flask db upgrade
    ```
 
-5. **Seed the database with sample data** (optional)
+4. **Seed the database with sample data** (optional)
    ```bash
    python seed.py
    ```
-   
+
    This creates:
    - 3 test users (alice, bob, charlie)
    - 5-8 sample notes per user
-   - Test passwords listed in the console output
+   - Test passwords printed to the console
 
 ## Running the Application
 
-### Development Server
-
-Start the Flask development server:
+Start the development server:
 
 ```bash
 flask run
@@ -112,20 +108,11 @@ Or:
 python app.py
 ```
 
-The API will be available at `http://localhost:5000`
-
-### Production Server
-
-For production, use a production WSGI server like Gunicorn:
-
-```bash
-pip install gunicorn
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
-```
+The API will be available at `http://localhost:5000`.
 
 ### Environment Variables
 
-Create a `.env` file for sensitive configuration:
+Copy `.env.example` to `.env` and adjust as needed:
 
 ```
 FLASK_ENV=development
@@ -134,11 +121,19 @@ JWT_SECRET_KEY=your-super-secret-key-here
 DATABASE_URL=sqlite:///app.db
 ```
 
+## Test Credentials (after seeding)
+
+| Username | Password    |
+|----------|-------------|
+| alice    | password123 |
+| bob      | password234 |
+| charlie  | password345 |
+
 ## API Endpoints
 
 ### Authentication Endpoints
 
-#### 1. Register (Sign Up)
+#### Register (Sign Up)
 Create a new user account.
 
 **Endpoint**: `POST /signup`
@@ -164,12 +159,11 @@ Create a new user account.
 ```
 
 **Errors**:
-- 400: Username/email already taken, passwords don't match, missing fields
-- 400: Password less than 6 characters
+- 400: Username/email already taken, passwords don't match, missing fields, or password shorter than 6 characters
 
 ---
 
-#### 2. Login
+#### Login
 Authenticate and receive a JWT token.
 
 **Endpoint**: `POST /login`
@@ -198,8 +192,8 @@ Authenticate and receive a JWT token.
 
 ---
 
-#### 3. Check Session
-Verify current user authentication (useful for frontend).
+#### Check Session
+Verify current user authentication (useful for frontend integration).
 
 **Endpoint**: `GET /check_session`
 
@@ -223,8 +217,8 @@ Authorization: Bearer <access_token>
 
 ---
 
-#### 4. Logout
-Logout the current user (JWT is stateless, so this is mainly for client-side cleanup).
+#### Logout
+Log out the current user. Because JWTs are stateless, this endpoint is mainly for client-side cleanup.
 
 **Endpoint**: `DELETE /logout`
 
@@ -249,8 +243,8 @@ All note endpoints require JWT authentication via the `Authorization` header:
 Authorization: Bearer <access_token>
 ```
 
-#### 5. Get All Notes (Paginated)
-Retrieve paginated list of the authenticated user's notes.
+#### Get All Notes (Paginated)
+Retrieve a paginated list of the authenticated user's notes.
 
 **Endpoint**: `GET /notes`
 
@@ -271,14 +265,6 @@ Retrieve paginated list of the authenticated user's notes.
       "user_id": 1,
       "created_at": "2024-01-15T10:30:00",
       "updated_at": "2024-01-15T10:30:00"
-    },
-    {
-      "id": 2,
-      "title": "Project ideas",
-      "content": "Consider implementing...",
-      "user_id": 1,
-      "created_at": "2024-01-14T15:45:00",
-      "updated_at": "2024-01-14T15:45:00"
     }
   ],
   "pagination": {
@@ -295,7 +281,7 @@ Retrieve paginated list of the authenticated user's notes.
 
 ---
 
-#### 6. Create a Note
+#### Create a Note
 Create a new note for the authenticated user.
 
 **Endpoint**: `POST /notes`
@@ -304,7 +290,7 @@ Create a new note for the authenticated user.
 ```json
 {
   "title": "My First Note",
-  "content": "This is the content of my note. It can be quite long!"
+  "content": "This is the content of my note."
 }
 ```
 
@@ -313,7 +299,7 @@ Create a new note for the authenticated user.
 {
   "id": 9,
   "title": "My First Note",
-  "content": "This is the content of my note. It can be quite long!",
+  "content": "This is the content of my note.",
   "user_id": 1,
   "created_at": "2024-01-16T09:00:00",
   "updated_at": "2024-01-16T09:00:00"
@@ -321,18 +307,15 @@ Create a new note for the authenticated user.
 ```
 
 **Errors**:
-- 400: Missing title or content
-- 400: Empty title or content
+- 400: Missing or empty title/content
 - 401: Missing or invalid token
 
 ---
 
-#### 7. Get a Single Note
-Retrieve a specific note (must be owned by authenticated user).
+#### Get a Single Note
+Retrieve a specific note (must be owned by the authenticated user).
 
 **Endpoint**: `GET /notes/<note_id>`
-
-**Example**: `GET /notes/1`
 
 **Response** (200 OK):
 ```json
@@ -353,14 +336,12 @@ Retrieve a specific note (must be owned by authenticated user).
 
 ---
 
-#### 8. Update a Note
-Modify an existing note (must be owned by authenticated user).
+#### Update a Note
+Modify an existing note (must be owned by the authenticated user).
 
-**Endpoint**: `PATCH /notes/<note_id>` or `PUT /notes/<note_id>`
+**Endpoint**: `PATCH /notes/<note_id>` (also accepts `PUT`)
 
-**Example**: `PATCH /notes/1`
-
-**Request Body** (partial update):
+**Request Body** (partial update supported):
 ```json
 {
   "title": "Updated Title",
@@ -388,12 +369,10 @@ Modify an existing note (must be owned by authenticated user).
 
 ---
 
-#### 9. Delete a Note
-Delete a note (must be owned by authenticated user).
+#### Delete a Note
+Delete a note (must be owned by the authenticated user).
 
 **Endpoint**: `DELETE /notes/<note_id>`
-
-**Example**: `DELETE /notes/1`
 
 **Response** (200 OK):
 ```json
@@ -423,142 +402,36 @@ Check API status.
 }
 ```
 
----
+## Running the Tests
+
+The project includes a pytest suite covering authentication, CRUD, pagination, and access control:
+
+```bash
+pytest test_api.py -v
+```
+
+All 19 tests should pass.
 
 ## Testing with Postman
 
-### Setup Postman Environment
+1. `POST /signup` or `POST /login` to obtain an `access_token`.
+2. For protected requests, set the **Authorization** tab to **Bearer Token** and paste the token.
+3. Exercise the note endpoints: create, list (with `?page=` and `?per_page=`), fetch, update, and delete.
 
-1. **Create a new Postman collection**
-2. **Add an environment variable** for the base URL:
-   - `base_url`: `http://localhost:5000`
-3. **Add a variable** for the JWT token (set after login):
-   - `access_token`: (empty initially)
+## Security Notes
 
-### Sample Testing Flow
+- Passwords are hashed with bcrypt (never stored in plain text).
+- JWT tokens expire after 30 days (configurable in `config.py`).
+- Every note endpoint verifies ownership before returning or modifying data, so users cannot access each other's notes.
+- Input is validated on all endpoints.
 
-1. **Sign Up**: POST to `/signup` with test credentials
-2. **Login**: POST to `/login` → Save the `access_token` from response
-3. **Create Note**: POST to `/notes` with `Authorization: Bearer {{access_token}}`
-4. **Get Notes**: GET `/notes` with the auth header
-5. **Update Note**: PATCH `/notes/1` with updated data
-6. **Delete Note**: DELETE `/notes/1`
+### For Production
 
-### Postman Authorization Setup
-
-For authenticated requests:
-1. Select the request
-2. Go to **Authorization** tab
-3. Choose **Bearer Token** type
-4. Paste your JWT token in the token field
-5. Or use the environment variable: `{{access_token}}`
-
----
-
-## Security Considerations
-
-✅ **Password Hashing**: All passwords are hashed using bcrypt with salt  
-✅ **JWT Tokens**: Tokens expire after 30 days (configurable)  
-✅ **Authorization Checks**: Users cannot access other users' notes  
-✅ **Input Validation**: All inputs are validated and sanitized  
-✅ **CORS**: Configured to prevent cross-site requests  
-✅ **HTTPS**: Use in production (set `SESSION_COOKIE_SECURE = True`)  
-
-### Production Recommendations
-
-1. Change `JWT_SECRET_KEY` to a strong random value
-2. Use PostgreSQL instead of SQLite for production
-3. Enable HTTPS (set `SESSION_COOKIE_SECURE = True`)
-4. Set `DEBUG = False` in production
-5. Use environment variables for sensitive data
-6. Use a production WSGI server (Gunicorn, uWSGI)
-7. Add rate limiting to prevent abuse
-8. Implement request logging and monitoring
-
----
-
-## Troubleshooting
-
-### Database Issues
-
-**Problem**: `No such table: user`  
-**Solution**: Run migrations: `flask db upgrade`
-
-**Problem**: `(sqlite3.OperationalError) database is locked`  
-**Solution**: Close other connections; use PostgreSQL for concurrent access
-
-### Authentication Issues
-
-**Problem**: Token not recognized  
-**Solution**: Ensure token is passed in `Authorization: Bearer <token>` header
-
-**Problem**: Expired token  
-**Solution**: Login again to get a fresh token
-
-### Port Already in Use
-
-**Problem**: `Address already in use`  
-**Solution**: Change the port: `flask run --port 5001`
-
----
-
-## Development Workflow
-
-### Making Database Changes
-
-1. Modify models in `models.py`
-2. Create a migration: `flask db migrate -m "Description"`
-3. Review the migration file
-4. Apply it: `flask db upgrade`
-
-### Testing Locally
-
-1. Seed the database: `python seed.py`
-2. Start the server: `flask run`
-3. Use Postman or curl to test endpoints
-4. Check responses and status codes
-
-### Git Workflow
-
-```bash
-# Make your changes
-git add .
-git commit -m "Add new feature"
-git push origin main
-```
-
----
-
-## API Response Format
-
-### Success Response (2xx)
-```json
-{
-  "id": 1,
-  "username": "alice",
-  ...
-}
-```
-
-### Error Response (4xx, 5xx)
-```json
-{
-  "error": "Description of what went wrong"
-}
-```
-
-or
-
-```json
-{
-  "errors": [
-    "Validation error 1",
-    "Validation error 2"
-  ]
-}
-```
-
----
+- Set a strong random `JWT_SECRET_KEY`.
+- Use PostgreSQL instead of SQLite.
+- Enable HTTPS and set `SESSION_COOKIE_SECURE = True`.
+- Set `DEBUG = False`.
+- Serve with a production WSGI server such as Gunicorn.
 
 ## License
 
@@ -566,15 +439,4 @@ This project is provided as-is for educational purposes.
 
 ---
 
-## Support
-
-For issues or questions:
-1. Check the troubleshooting section
-2. Review the endpoint documentation
-3. Test with Postman
-4. Check server logs for detailed error messages
-
----
-
-**Created for the Secure API Backend Lab**  
-JWT Authentication | Flask | SQLAlchemy | SQLite
+**Created for the Secure API Backend Lab** — JWT Authentication | Flask | SQLAlchemy | SQLite
