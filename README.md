@@ -418,6 +418,34 @@ All 19 tests should pass.
 2. For protected requests, set the **Authorization** tab to **Bearer Token** and paste the token.
 3. Exercise the note endpoints: create, list (with `?page=` and `?per_page=`), fetch, update, and delete.
 
+## Deployment (Render)
+
+This repo includes a `render.yaml` Blueprint that provisions a free web service and a free PostgreSQL database together, and points the app at Postgres in production instead of the local SQLite file.
+
+1. Commit and push these changes to GitHub:
+   ```bash
+   git add .
+   git commit -m "Add Render deployment config"
+   git push origin main
+   ```
+2. In the [Render dashboard](https://dashboard.render.com/), click **New +** → **Blueprint**, then select this repository.
+3. Render reads `render.yaml` and provisions:
+   - a `notes-api` web service — build command `pip install -r requirements.txt`, start command `flask db upgrade && gunicorn app:app` (migrations run automatically before each start)
+   - a `notes-api-db` free Postgres database, wired to the service through the `DATABASE_URL` environment variable
+   - an auto-generated `JWT_SECRET_KEY`
+4. Click **Apply** and wait for the first deploy to finish (a few minutes).
+5. Once live, your API is reachable at `https://notes-api-<random>.onrender.com` (the exact URL is shown on the service page in the dashboard). Confirm it's up with:
+   ```bash
+   curl https://<your-service>.onrender.com/health
+   ```
+6. Give the frontend team this base URL so they can point the client app at it.
+
+If you'd rather set it up by hand instead of using the Blueprint: create a new Postgres instance and a new Web Service in the dashboard separately, connect the web service to this GitHub repo, and set the same build command, start command, and environment variables (`FLASK_ENV=production`, `FLASK_APP=app.py`, `JWT_SECRET_KEY=<a random string>`, `DATABASE_URL=<the Postgres connection string Render gives you>`) shown in `render.yaml`.
+
+A couple of things to know about Render's free tier:
+- Free Postgres databases expire 30 days after creation (14-day grace period to upgrade before deletion) — fine for grading, but don't rely on it as permanent storage.
+- Free web services spin down after 15 minutes without traffic and take roughly 30–60 seconds to wake up on the next request, so the first request after a period of inactivity will be slow. That's expected, not a bug.
+
 ## Security Notes
 
 - Passwords are hashed with bcrypt (never stored in plain text).

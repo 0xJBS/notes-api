@@ -1,0 +1,129 @@
+diff --git a/Pipfile b/Pipfile
+index 0333aca..f023651 100644
+--- a/Pipfile
++++ b/Pipfile
+@@ -16,7 +16,10 @@ importlib-resources = "==5.10.0"
+ pytest = "==7.2.0"
+ flask-bcrypt = "==1.0.1"
+ flask-jwt-extended = "==4.4.4"
++flask-cors = "==4.0.0"
+ python-dotenv = "==0.21.0"
++gunicorn = "==22.0.0"
++psycopg2-binary = "==2.9.9"
+ 
+ [dev-packages]
+ 
+diff --git a/README.md b/README.md
+index 694b242..070585c 100644
+--- a/README.md
++++ b/README.md
+@@ -418,6 +418,34 @@ All 19 tests should pass.
+ 2. For protected requests, set the **Authorization** tab to **Bearer Token** and paste the token.
+ 3. Exercise the note endpoints: create, list (with `?page=` and `?per_page=`), fetch, update, and delete.
+ 
++## Deployment (Render)
++
++This repo includes a `render.yaml` Blueprint that provisions a free web service and a free PostgreSQL database together, and points the app at Postgres in production instead of the local SQLite file.
++
++1. Commit and push these changes to GitHub:
++   ```bash
++   git add .
++   git commit -m "Add Render deployment config"
++   git push origin main
++   ```
++2. In the [Render dashboard](https://dashboard.render.com/), click **New +** → **Blueprint**, then select this repository.
++3. Render reads `render.yaml` and provisions:
++   - a `notes-api` web service — build command `pip install -r requirements.txt`, start command `flask db upgrade && gunicorn app:app` (migrations run automatically before each start)
++   - a `notes-api-db` free Postgres database, wired to the service through the `DATABASE_URL` environment variable
++   - an auto-generated `JWT_SECRET_KEY`
++4. Click **Apply** and wait for the first deploy to finish (a few minutes).
++5. Once live, your API is reachable at `https://notes-api-<random>.onrender.com` (the exact URL is shown on the service page in the dashboard). Confirm it's up with:
++   ```bash
++   curl https://<your-service>.onrender.com/health
++   ```
++6. Give the frontend team this base URL so they can point the client app at it.
++
++If you'd rather set it up by hand instead of using the Blueprint: create a new Postgres instance and a new Web Service in the dashboard separately, connect the web service to this GitHub repo, and set the same build command, start command, and environment variables (`FLASK_ENV=production`, `FLASK_APP=app.py`, `JWT_SECRET_KEY=<a random string>`, `DATABASE_URL=<the Postgres connection string Render gives you>`) shown in `render.yaml`.
++
++A couple of things to know about Render's free tier:
++- Free Postgres databases expire 30 days after creation (14-day grace period to upgrade before deletion) — fine for grading, but don't rely on it as permanent storage.
++- Free web services spin down after 15 minutes without traffic and take roughly 30–60 seconds to wake up on the next request, so the first request after a period of inactivity will be slow. That's expected, not a bug.
++
+ ## Security Notes
+ 
+ - Passwords are hashed with bcrypt (never stored in plain text).
+diff --git a/config.py b/config.py
+index e0db9fb..bea6c50 100644
+--- a/config.py
++++ b/config.py
+@@ -1,13 +1,26 @@
+ import os
+ from datetime import timedelta
+ 
++
++def _normalized_database_url():
++    """
++    Read DATABASE_URL from the environment and normalize it for SQLAlchemy.
++
++    Render (and some other hosts) provide Postgres connection strings that
++    start with "postgres://", but SQLAlchemy 1.4+/2.x requires the
++    "postgresql://" scheme. Falls back to a local SQLite file when no
++    DATABASE_URL is set (local development).
++    """
++    url = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
++    if url.startswith('postgres://'):
++        url = url.replace('postgres://', 'postgresql://', 1)
++    return url
++
++
+ class Config:
+     """Base configuration"""
+     # Database
+-    SQLALCHEMY_DATABASE_URI = os.environ.get(
+-        'DATABASE_URL',
+-        'sqlite:///app.db'
+-    )
++    SQLALCHEMY_DATABASE_URI = _normalized_database_url()
+     SQLALCHEMY_TRACK_MODIFICATIONS = False
+     
+     # JWT
+diff --git a/render.yaml b/render.yaml
+new file mode 100644
+index 0000000..95cc424
+--- /dev/null
++++ b/render.yaml
+@@ -0,0 +1,24 @@
++services:
++  - type: web
++    name: notes-api
++    runtime: python
++    plan: free
++    buildCommand: "pip install -r requirements.txt"
++    startCommand: "flask db upgrade && gunicorn app:app"
++    envVars:
++      - key: FLASK_ENV
++        value: production
++      - key: FLASK_APP
++        value: app.py
++      - key: JWT_SECRET_KEY
++        generateValue: true
++      - key: DATABASE_URL
++        fromDatabase:
++          name: notes-api-db
++          property: connectionString
++      - key: PYTHON_VERSION
++        value: 3.11.9
++
++databases:
++  - name: notes-api-db
++    plan: free
+diff --git a/requirements.txt b/requirements.txt
+index 14dd9d0..4c79c94 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -12,3 +12,5 @@ Flask-Bcrypt==1.0.1
+ Flask-JWT-Extended==4.6.0
+ Flask-CORS==4.0.0
+ python-dotenv==0.21.0
++gunicorn==22.0.0
++psycopg2-binary==2.9.9

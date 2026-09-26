@@ -1,13 +1,26 @@
 import os
 from datetime import timedelta
 
+
+def _normalized_database_url():
+    """
+    Read DATABASE_URL from the environment and normalize it for SQLAlchemy.
+
+    Render (and some other hosts) provide Postgres connection strings that
+    start with "postgres://", but SQLAlchemy 1.4+/2.x requires the
+    "postgresql://" scheme. Falls back to a local SQLite file when no
+    DATABASE_URL is set (local development).
+    """
+    url = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    if url.startswith('postgres://'):
+        url = url.replace('postgres://', 'postgresql://', 1)
+    return url
+
+
 class Config:
     """Base configuration"""
     # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        'DATABASE_URL',
-        'sqlite:///app.db'
-    )
+    SQLALCHEMY_DATABASE_URI = _normalized_database_url()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # JWT
